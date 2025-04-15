@@ -14,8 +14,26 @@ module.exports = {
         },
         // 配置CDN
         configure: (webpackConfig) => {
+            const sassLoaderRule = webpackConfig.module.rules.find(
+                (rule) => rule.test && rule.test.toString().includes("scss")
+            );
             let cdn = {
                 js: []
+            }
+            if (sassLoaderRule) {
+                sassLoaderRule.use = sassLoaderRule.use.map((loader) => {
+                    if (loader.loader.includes("sass-loader")) {
+                        return {
+                            ...loader,
+                            options: {
+                                ...loader.options,
+                                api: "modern",  // 启用现代API[1,2](@ref)
+                                silenceDeprecations: ["legacy-js-api"],  // 静默警告[4,6](@ref)
+                            },
+                        };
+                    }
+                    return loader;
+                });
             }
             whenProd(() => {
                 // key: 不参与打包的包(由dependencies依赖项中的key决定)
