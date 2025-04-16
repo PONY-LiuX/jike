@@ -4,7 +4,7 @@ import { createBrowserRouter } from "react-router-dom";
 import { AuthRoute } from "@/components/AuthRoute";
 import Home from "@/pages/Home";
 import Article from "@/pages/Article";
-import Publish from "@/pages/Publish/Publish";
+import Publish from "@/pages/Publish";
 
 const router = createBrowserRouter([
     {
