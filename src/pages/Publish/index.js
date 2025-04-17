@@ -11,12 +11,12 @@ import {
     message
 } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import './index.scss'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
-import { useState } from 'react'
-import { createArticleAPI } from '@/apis/article'
+import { useEffect, useState } from 'react'
+import { createArticleAPI, getArticleByIDAPI, updateArticleAPI } from '@/apis/article'
 import { useChannel } from '@/hooks/useChannel'
 
 const { Option } = Select
@@ -34,6 +34,7 @@ const Publish = () => {
     //     getChannelList()
 
     // }, [])
+    const navigate = useNavigate()
 
     const { channelList } = useChannel()
 
@@ -49,12 +50,28 @@ const Publish = () => {
             content,
             cover: {
                 type: imageType, //封面模式
-                images: imageList.map(item => item.response.data.url)  //图片列表
+                //在新增时可用，编辑时需要处理
+                images: imageList.map(item => {
+                    if (item.response) {
+                        return item.response.data.url
+                    } else {
+                        return item.url
+                    }
+                })  //图片列表
             },
             channel_id
         }
-        //调用接口提交
-        createArticleAPI(poseData)
+        //2 调用接口提交
+        //处理 是新增还是编辑的接口？ 关键在于articleID
+        if (articleId) {
+            //更新接口
+            updateArticleAPI({ ...poseData, id: articleId })
+        } else {
+            //新增接口
+            createArticleAPI(poseData)
+        }
+
+
     }
 
     //上传图片回调
@@ -72,13 +89,51 @@ const Publish = () => {
         setImageList([])
     }
 
+    //回填数据
+    const [searchParams] = useSearchParams()
+    const articleId = searchParams.get('id')
+    // console.log(articleId)
+    //获取实例
+    const [form] = Form.useForm()
+
+    useEffect(() => {
+        // 1 通过id获取数据
+        async function getArtilceDetail() {
+            const res = await getArticleByIDAPI(articleId)
+            const data = res.data
+            const { cover } = data
+            form.setFieldsValue({
+                ...data,
+                type: cover.type,
+                content: data.content
+            })
+
+
+            //无法回填封面，因为数据结构不对
+            //set方法 -> {type : 3}   而 {cover :{ type : 3}}
+            //  form.setFieldsValue(res.data)
+            //回填图片列表 先显示出列表
+            setImageType(cover.type)
+            //回填图片 但是要处理成对象的结构 返回对象结构
+            setImageList(cover.images.map(url => {
+                return { url }
+            }))
+        }
+        //url带id才调
+        if (articleId) {
+            getArtilceDetail()
+        }
+        //2 调用实例方法 完成回填
+    }, [articleId, form])
+
+
     return (
         <div className="publish">
             <Card
                 title={
                     <Breadcrumb items={[
                         { title: <Link to={'/'}>首页</Link> },
-                        { title: '发布文章' },
+                        { title: `${articleId ? '编辑' : '发布'} 文章` },
                     ]}
                     />
                 }
@@ -88,6 +143,7 @@ const Publish = () => {
                     wrapperCol={{ span: 16 }}
                     initialValues={{ type: 0 }}
                     onFinish={onFinish}
+                    form={form}
                 >
                     <Form.Item
                         label="标题"
@@ -126,6 +182,7 @@ const Publish = () => {
                             name='image'
                             onChange={onChange}
                             maxCount={imageType}
+                            fileList={imageList}
                         >
                             <div style={{ marginTop: 8 }}>
                                 <PlusOutlined />
@@ -141,12 +198,14 @@ const Publish = () => {
                             className="publish-quill"
                             theme="snow"
                             placeholder="请输入文章内容"
+                        // value={content} // 绑定表单值
                         />
                     </Form.Item>
 
                     <Form.Item wrapperCol={{ offset: 4 }}>
                         <Space>
-                            <Button size="large" type="primary" htmlType="submit">
+                            <Button size="large" type="primary" htmlType="submit" onClick={() => navigate(`/article`)}>
+
                                 发布文章
                             </Button>
                         </Space>

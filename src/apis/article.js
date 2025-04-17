@@ -17,6 +17,15 @@ export function createArticleAPI(data) {
         data
     })
 }
+//更新
+export function updateArticleAPI(data) {
+    return request({
+        url: `mp/articles/${data.id}?draft=false`,
+        method: 'PUT',
+        data
+    })
+}
+
 
 //获取文章列表
 export function getArtcleAPI(params) {
@@ -32,5 +41,12 @@ export function delArticleAPI(id) {
     return request({
         url: `/mp/articles/${id}`,
         method: 'DELETE'
+    })
+}
+
+//获取文章详情
+export function getArticleByIDAPI(id) {
+    return request({
+        url: `/mp/articles/${id}`
     })
 }
